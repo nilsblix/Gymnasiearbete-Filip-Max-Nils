@@ -2,7 +2,7 @@ const canvas = document.getElementById("myCanvas");
 const c = canvas.getContext("2d");
 
 const x_offset = 20;
-const y_offset = 100;
+const y_offset = 40;
 canvas.width = window.innerWidth - x_offset;
 canvas.height = window.innerHeight - y_offset;
 
@@ -35,10 +35,18 @@ class Vector2 {
         return this;
     }
 
+    static addVectors(a, b) {
+        return new Vector2(a.x + b.x, a.y + b.y);
+    }
+
     subtract(v) {
         this.x -= v.x;
         this.y -= v.y;
         return this;
+    }
+
+    static subtractVectors(a, b) {
+        return new Vector2(a.x - b.x, a.y - b.y);
     }
 
     mult(s) {
@@ -52,6 +60,7 @@ class Vector2 {
     }
 
     magnitude() {
+        if (this.x == 0 && this.y == 0) return 0;
         return Math.sqrt(this.sqr_magnitude());
     }
 
@@ -80,7 +89,7 @@ class Cell {
 
     // Euclidean distance from this to end
     calculateHeuristic(end) {
-        this.h = (this.id.subtract(end.id)).magnitude();
+        this.h = Vector2.subtractVectors(this.id, end.id).magnitude();
         this.f = this.g + this.h;
     }
 
@@ -124,9 +133,13 @@ class Grid {
         const pos = cell.id;
         const directions = [
             new Vector2(1, 0),  // right
-            new Vector2(0, 1),  // up
+            new Vector2(1,1),   // top right
+            new Vector2(0, 1),  // top
+            new Vector2(-1, 1), // top left
             new Vector2(-1, 0), // left
-            new Vector2(0, -1)  // down
+            new Vector2(-1, -1),// down left  
+            new Vector2(0, -1), // down
+            new Vector2(1, -1)  // down right
         ]
 
         for (let dir of directions) {
@@ -141,143 +154,123 @@ class Grid {
     }
 }
 
-function aStar(grid, start, end) {
-    let openSet = [start];
-    let closedSet = [];
-
-    start.calculateHeuristic(end);
-
-    while (openSet.length > 0) {
-        // Find the cell in the open set with the lowest f value
-        let lowestIndex = 0;
-        for (let i = 1; i < openSet.length; i++) {
-            if (openSet[i].f < openSet[lowestIndex].f) {
-                lowestIndex = i;
-            }
-        }
-        let current = openSet[lowestIndex];
-
-        // If the current cell is the end cell, we've found the path
-        if (current.equals(end)) {
-            let path = [];
-            let temp = current;
-            while (temp.previous) {
-                path.push(temp);
-                temp = temp.previous;
-            }
-            path.push(start); // Optionally include the start cell
-            return path.reverse();
-        }
-
-        // Move the current cell from open to closed set
-        openSet.splice(lowestIndex, 1);
-        closedSet.push(current);
-
-        // Check each neighbor of the current cell
-        let neighbours = grid.getNeighbours(current);
-        for (let neighbour of neighbours) {
-            if (closedSet.includes(neighbour)) {
-                continue;
-            }
-
-            let tentativeG = current.g + 1;
-
-            if (!openSet.includes(neighbour)) {
-                openSet.push(neighbour);
-            } else if (tentativeG >= neighbour.g) {
-                continue;
-            }
-
-            neighbour.g = tentativeG;
-            neighbour.calculateHeuristic(end);
-            neighbour.previous = current;
-        }
+class AStar {
+    constructor() {
+        this.openSet = [];
+        this.closedSet = [];
+        this.raw_openSet = [];
+        this.raw_closedSet = [];
     }
+
+    getPath(grid, start, end) {
+        this.openSet = [start];
+        this.raw_openSet = this.openSet;
+        this.closedSet = [];
+        this.raw_closedSet = this.closedSet;
+
+        start.calculateHeuristic(end);
+
+        while (this.openSet.length > 0) {
+            // Find the cell in the open set with the lowest f value
+            let lowestIndex = 0;
+            for (let i = 1; i < this.openSet.length; i++) {
+                if (this.openSet[i].f < this.openSet[lowestIndex].f) {
+                    lowestIndex = i;
+                }
+            }
+            let current = this.openSet[lowestIndex];
+
+            // If the current cell is the end cell, we've found the path
+            if (current.equals(end)) {
+                let path = [];
+                let temp = current;
+                while (temp.previous) {
+                    path.push(temp);
+                    temp = temp.previous;
+                }
+                path.push(start); // Optionally include the start cell
+                return path.reverse();
+            }
+
+            // Move the current cell from open to closed set
+            this.openSet.splice(lowestIndex, 1);
+            this.closedSet.push(current);
+            this.raw_closedSet.push(current);
+
+            // Check each neighbor of the current cell
+            let neighbours = grid.getNeighbours(current);
+            for (let neighbour of neighbours) {
+                if (this.closedSet.includes(neighbour)) {
+                    continue;
+                }
+
+                let tentativeG = current.g + (current.id.x != neighbour.id.x && current.id.y != neighbour.id.y ? Math.SQRT2 : 1);
+
+                if (!this.openSet.includes(neighbour)) {
+                    this.openSet.push(neighbour);
+                    this.raw_openSet.push(neighbour);
+                } else if (tentativeG >= neighbour.g) {
+                    continue;
+                }
+
+                neighbour.g = tentativeG;
+                neighbour.calculateHeuristic(end);
+                neighbour.previous = current;
+            }
+        }
 
     // If we get here, there's no valid path
     console.log("No valid path has been found");
     return null;
-}
 
+    }
+}
 let solver = {
     cell_width : canvas.width / 32,
     grid : new Grid(canvas.width / 32),
     path : null,
-    destination : new Cell(0, 0, false),
-    source : new Cell(1, 0, false),
-    frameCount : 0
+    destination : new Cell(1, 0, false),
+    source : new Cell(10, 10, false),
+    frameCount : 0,
+    aStar : new AStar()
 }
 
 function draw() {
-    // console.log("function draw() has been called")
+    const blockedColor = "black";
+    const pathColor = "#77cf6b";
+    const destinationColor = "#FF0000";
+    const sourceColor = "#009900";
+    const cellBorderColor = "rgba(0,0,0,0.2)";
 
     for (let x = 0; x < solver.grid.numX; x++) {
         for (let y = 0; y < solver.grid.numY; y++) {
-            c.fillStyle = "#808080";
-            c.beginPath();
 
-            let pos = new Vector2(x * solver.cell_width, (y+1) * solver.cell_width)
+            const cell = solver.grid.getCell(x, y);
+            let color = "white";
 
-            c.rect(pos.x, canvas.height - pos.y, solver.cell_width, solver.cell_width);
-            c.closePath();
-            c.fill();
+            if (cell.isBlocked) 
+                color = blockedColor;
+            if (solver.path && solver.path.includes(cell))
+                color = pathColor;
+            if (cell.equals(solver.source))
+                color = sourceColor;
+            if (cell.equals(solver.destination))
+                color = destinationColor;
 
-            let delta = 2;
-            let smaller_width = solver.cell_width - delta;
-            let new_pos = pos.add(new Vector2(delta / 2, delta / 2));
+            // Draw the cell
+            c.fillStyle = color;
+            c.fillRect(x * solver.cell_width, canvas.height - (y + 1) * solver.cell_width, solver.cell_width, solver.cell_width);
 
-            c.fillStyle = "#D3D3D3";
-            if (solver.grid.cells[x][y].isBlocked) {
-                c.fillStyle = "#DD3333"
-            }
-            c.beginPath();
-            c.rect(new_pos.x, canvas.height - new_pos.y, smaller_width, smaller_width);
-            c.closePath();
-            c.fill();
-
-            // console.log("one cell has been drawn, id: " + pos.toString());
+            // Optionally, draw cell borders
+            c.strokeStyle = cellBorderColor;
+            c.strokeRect(x * solver.cell_width, canvas.height - (y + 1) * solver.cell_width, solver.cell_width, solver.cell_width);
 
         }
     }
-
-    // console.log("grid render has been completed");
-
-    if (solver.path != null) {
-        for (let cell of solver.path) {
-            c.fillStyle = "#FFFF00";
-            c.beginPath();
-
-            let pos = new Vector2(cell.id.x * solver.cell_width, (cell.id.y+1) * solver.cell_width)
-
-            c.rect(pos.x, canvas.height - pos.y, solver.cell_width, solver.cell_width);
-            c.closePath();
-            c.fill();
-        }
-    }
-
-    // destination
-    c.fillStyle = "#AA0000";
-    c.beginPath();
-
-    let dest_pos = new Vector2(solver.destination.id.x * solver.cell_width, (solver.destination.id.y+1) * solver.cell_width)
-
-    c.rect(dest_pos.x, canvas.height - dest_pos.y, solver.cell_width, solver.cell_width);
-    c.closePath();
-    c.fill();
-
-    // source
-    c.fillStyle = "#00BB00";
-    c.beginPath();
-
-    let src_pos = new Vector2(solver.source.id.x * solver.cell_width, (solver.source.id.y+1) * solver.cell_width)
-
-    c.rect(src_pos.x, canvas.height - src_pos.y, solver.cell_width, solver.cell_width);
-    c.closePath();
-    c.fill();
-
 }
 
 function start() {
+
     for (let i = 0; i < 7; i++) {
         solver.grid.cells[4][i].isBlocked = true;
     }
@@ -286,14 +279,24 @@ function start() {
         solver.grid.cells[i][10].isBlocked = true;
     }
 
-    for (let i = 5; i < 15; i++) {
+    for (let i = 5; i < 22; i++) {
         solver.grid.cells[9][i].isBlocked = true;
     }
 
-    let y = 15;
-    for (let x = 15; x < 28; x++) {
-        solver.grid.cells[x][y].isBlocked = true;
-        y--;
+    // let y = 15;
+    // for (let x = 15; x < 28; x++) {
+    //     solver.grid.cells[x][y].isBlocked = true;
+    //     y--;
+    // }
+
+    for (let y = 5; y < 20; y++) {
+        solver.grid.cells[15][y].isBlocked = true;
+        solver.grid.cells[16][y].isBlocked = true;
+    }
+
+    for (let x = 15; x < 30; x++) {
+        solver.grid.cells[x][5].isBlocked = true;
+        solver.grid.cells[x][6].isBlocked = true;
     }
 
 }
@@ -308,30 +311,39 @@ function update() {
 start();
 update();
 
+let lastGridPos = new Vector2(-1, -1); // Track the last grid position to avoid redundant calculations
+
 canvas.addEventListener("mousemove", function(event) {
-    c.clearRect(0, 0, canvas.width, canvas.height);
     const rect = canvas.getBoundingClientRect();
     let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
 
     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
-    const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width)
+    const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
 
     let grid_pos = new Vector2(grid_x, grid_y);
-    // solver.grid.cells[grid_x][grid_y].isBlocked = !solver.grid.cells[grid_x][grid_y].isBlocked;
 
-    solver.source = new Cell(grid_pos.x, grid_pos.y, false)
-    solver.path = aStar(solver.grid, solver.source, solver.destination);
+    if (!grid_pos.equals(lastGridPos)) {
+        solver.source = new Cell(grid_x, grid_y, false);
 
-    console.log("numX: " + solver.grid.numX);
-    console.log("numY: " + solver.grid.numY);
+        if (solver.source && solver.destination) {
+            solver.aStar = new AStar();
+            solver.path = solver.aStar.getPath(solver.grid, solver.source, solver.destination);
+            lastGridPos = grid_pos; // Update last tracked position
+        }
+    }
 
-
-    console.log("m: canvas_pos = " + canvas_pos.toString());
-    console.log("m:   grid_pos = " + grid_pos.toString());
-    console.log("frameCount: " + solver.frameCount);
-
-    console.log(" ");
-
+    // Redraw only after path calculation, if needed
+    c.clearRect(0, 0, canvas.width, canvas.height);
     draw();
-
 });
+
+canvas.addEventListener("mousedown", function(event) {
+    const rect = canvas.getBoundingClientRect();
+    let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
+
+    const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
+    const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
+
+    solver.destination = new Cell(grid_x, grid_y, false);
+})
+
