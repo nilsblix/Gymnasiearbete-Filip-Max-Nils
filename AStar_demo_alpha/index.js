@@ -238,7 +238,7 @@ let solver = {
 function draw() {
     const blockedColor = "black";
     const pathColor = "#77cf6b";
-    const destinationColor = "#FF0000";
+    const destinationColor = "#FFFF00";
     const sourceColor = "#009900";
     const cellBorderColor = "rgba(0,0,0,0.2)";
     // const openSetColor = "purple";
@@ -271,37 +271,51 @@ function draw() {
 
         }
     }
+
+}
+
+function randomWallGrid() {
+    for (let x = 0; x < solver.grid.numX; x++) {
+        for (let y = 0; y < solver.grid.numY; y++) {
+            let rand = Math.random();
+            if (rand * y / solver.grid.numY > 0.3) {
+                solver.grid.cells[x][y].isBlocked = true;
+            }
+        }
+    }
 }
 
 function start() {
 
-    for (let i = 0; i < 7; i++) {
-        solver.grid.cells[4][i].isBlocked = true;
-    }
+    randomWallGrid();
 
-    for (let i = 0; i < 10; i++) {
-        solver.grid.cells[i][10].isBlocked = true;
-    }
-
-    for (let i = 5; i < 22; i++) {
-        solver.grid.cells[9][i].isBlocked = true;
-    }
-
-    // let y = 15;
-    // for (let x = 15; x < 28; x++) {
-    //     solver.grid.cells[x][y].isBlocked = true;
-    //     y--;
+    // for (let i = 0; i < 7; i++) {
+    //     solver.grid.cells[4][i].isBlocked = true;
     // }
 
-    for (let y = 5; y < 20; y++) {
-        solver.grid.cells[15][y].isBlocked = true;
-        solver.grid.cells[16][y].isBlocked = true;
-    }
+    // for (let i = 0; i < 10; i++) {
+    //     solver.grid.cells[i][10].isBlocked = true;
+    // }
 
-    for (let x = 15; x < 30; x++) {
-        solver.grid.cells[x][5].isBlocked = true;
-        solver.grid.cells[x][6].isBlocked = true;
-    }
+    // for (let i = 5; i < 22; i++) {
+    //     solver.grid.cells[9][i].isBlocked = true;
+    // }
+
+    // // let y = 15;
+    // // for (let x = 15; x < 28; x++) {
+    // //     solver.grid.cells[x][y].isBlocked = true;
+    // //     y--;
+    // // }
+
+    // for (let y = 5; y < 20; y++) {
+    //     solver.grid.cells[15][y].isBlocked = true;
+    //     solver.grid.cells[16][y].isBlocked = true;
+    // }
+
+    // for (let x = 15; x < 30; x++) {
+    //     solver.grid.cells[x][5].isBlocked = true;
+    //     solver.grid.cells[x][6].isBlocked = true;
+    // }
 
 }
 
@@ -312,6 +326,7 @@ function update() {
     solver.frameCount++;
 
     document.getElementById("ms").innerHTML = timeElapsed.toFixed(3);
+    // timeElapsed = 0;
 
     requestAnimationFrame(update);
 }
@@ -335,13 +350,14 @@ canvas.addEventListener("mousemove", function(event) {
 
         if (solver.source && solver.destination) {
 
-            let start_time = performance.now;
             solver.aStar = new AStar();
-            let end_time = performance.now;
 
-            let timeElapsed = end_time - start_time;
-
+            let start_time = performance.now();
             solver.path = solver.aStar.getPath(solver.grid, solver.source, solver.destination);
+            let end_time = performance.now();
+
+            timeElapsed = end_time - start_time;
+
             lastGridPos = grid_pos; // Update last tracked position
         }
     }
