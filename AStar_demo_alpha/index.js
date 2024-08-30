@@ -241,6 +241,8 @@ function draw() {
     const destinationColor = "#FF0000";
     const sourceColor = "#009900";
     const cellBorderColor = "rgba(0,0,0,0.2)";
+    // const openSetColor = "purple";
+    // const closedSetColor = "purple";
 
     for (let x = 0; x < solver.grid.numX; x++) {
         for (let y = 0; y < solver.grid.numY; y++) {
@@ -250,6 +252,8 @@ function draw() {
 
             if (cell.isBlocked) 
                 color = blockedColor;
+            if (solver.aStar.closedSet.includes(cell))
+                color = "rgba(" + 10 * cell.g + ", 0," + 10 * cell.h + ", 1)";
             if (solver.path && solver.path.includes(cell))
                 color = pathColor;
             if (cell.equals(solver.source))
@@ -301,9 +305,13 @@ function start() {
 
 }
 
+let timeElapsed = 0;
+
 function update() {
     // console.log("frameCount: "+ solver.frameCount);
     solver.frameCount++;
+
+    document.getElementById("ms").innerHTML = timeElapsed.toFixed(3);
 
     requestAnimationFrame(update);
 }
@@ -326,7 +334,13 @@ canvas.addEventListener("mousemove", function(event) {
         solver.source = new Cell(grid_x, grid_y, false);
 
         if (solver.source && solver.destination) {
+
+            let start_time = performance.now;
             solver.aStar = new AStar();
+            let end_time = performance.now;
+
+            let timeElapsed = end_time - start_time;
+
             solver.path = solver.aStar.getPath(solver.grid, solver.source, solver.destination);
             lastGridPos = grid_pos; // Update last tracked position
         }
