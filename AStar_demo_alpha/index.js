@@ -6,23 +6,6 @@ const y_offset = 40;
 canvas.width = window.innerWidth - x_offset;
 canvas.height = window.innerHeight - y_offset;
 
-// const simulation_width = 10;
-// const mult_canv_sim = canvas.width / simulation_width;
-// const sim_width = canvas.width / mult_canv_sim;
-// const sim_height = canvas.height / mult_canv_sim;
-
-// function cs_x(v) {
-//     return v.x * mult_canv_sim;
-// }
-
-// function cs_y(v) {
-//     return canvas.height - v.y * mult_canv_sim;
-// }
-
-// function cs(v) {
-//     return new Vector2(cs_x(v), cs_y(v));
-// }
-
 class Vector2 {
     constructor(x = 0.0, y = 0.0) {
         this.x = x;
@@ -225,21 +208,25 @@ class AStar {
 
     }
 }
+
 let solver = {
-    cell_width : canvas.width / 32,
-    grid : new Grid(canvas.width / 32),
+    n : 128, // number of cells in one of the dimension
+    cell_width : null, // Math.max(canvas.width / 32, canvas.height / 32),
+    grid : null, // new Grid(canvas.width / 32),
     path : null,
-    destination : new Cell(1, 0, false),
+    destination : new Cell(0, 0, false),
     source : new Cell(10, 10, false),
     frameCount : 0,
     aStar : new AStar()
 }
+solver.cell_width = Math.max(canvas.width / solver.n, canvas.height / solver.n);
+solver.grid = new Grid(canvas.width / solver.n);
 
 function draw() {
-    const blockedColor = "black";
-    const pathColor = "#77cf6b";
-    const destinationColor = "#FFFF00";
-    const sourceColor = "#009900";
+    const blockedColor = "#000000";
+    const pathColor = "#FFFF00"; // "#9e4fff";
+    const destinationColor = "#FF0000";
+    const sourceColor = "#00FF00";
     const cellBorderColor = "rgba(0,0,0,0.2)";
     // const openSetColor = "purple";
     // const closedSetColor = "purple";
@@ -248,7 +235,7 @@ function draw() {
         for (let y = 0; y < solver.grid.numY; y++) {
 
             const cell = solver.grid.getCell(x, y);
-            let color = "white";
+            let color = "#FFFFFF";
 
             if (cell.isBlocked) 
                 color = blockedColor;
@@ -278,9 +265,10 @@ function randomWallGrid() {
     for (let x = 0; x < solver.grid.numX; x++) {
         for (let y = 0; y < solver.grid.numY; y++) {
             let rand = Math.random();
-            if (rand * y / solver.grid.numY > 0.3) {
+            if (rand > 0.5) {
                 solver.grid.cells[x][y].isBlocked = true;
             }
+            // * y / solver.grid.numY
         }
     }
 }
@@ -319,13 +307,16 @@ function start() {
 
 }
 
-let timeElapsed = 0;
+let astar_timeElapsed = 0;
+let render_timeElapsed = 0;
 
 function update() {
     // console.log("frameCount: "+ solver.frameCount);
     solver.frameCount++;
 
-    document.getElementById("ms").innerHTML = timeElapsed.toFixed(3);
+    document.getElementById("astar_ms").innerHTML = astar_timeElapsed.toFixed(3);
+    document.getElementById("render_ms").innerHTML = render_timeElapsed.toFixed(3);
+    document.getElementById("sum_ms").innerHTML = (astar_timeElapsed + render_timeElapsed).toFixed(3);
     // timeElapsed = 0;
 
     requestAnimationFrame(update);
@@ -352,19 +343,25 @@ canvas.addEventListener("mousemove", function(event) {
 
             solver.aStar = new AStar();
 
-            let start_time = performance.now();
+            let astar_st = performance.now();
             solver.path = solver.aStar.getPath(solver.grid, solver.source, solver.destination);
-            let end_time = performance.now();
+            let astar_et = performance.now();
 
-            timeElapsed = end_time - start_time;
+            astar_timeElapsed = astar_et - astar_st;
 
             lastGridPos = grid_pos; // Update last tracked position
         }
     }
 
+    let render_st = performance.now();
+
     // Redraw only after path calculation, if needed
     c.clearRect(0, 0, canvas.width, canvas.height);
     draw();
+
+    let render_et = performance.now();
+    render_timeElapsed = render_et - render_st;
+
 });
 
 canvas.addEventListener("mousedown", function(event) {
