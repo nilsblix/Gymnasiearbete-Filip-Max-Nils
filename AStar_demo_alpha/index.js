@@ -141,15 +141,11 @@ class AStar {
     constructor() {
         this.openSet = [];
         this.closedSet = [];
-        this.raw_openSet = [];
-        this.raw_closedSet = [];
     }
 
     getPath(grid, start, end) {
         this.openSet = [start];
-        this.raw_openSet = this.openSet;
         this.closedSet = [];
-        this.raw_closedSet = this.closedSet;
 
         start.calculateHeuristic(end);
 
@@ -178,7 +174,6 @@ class AStar {
             // Move the current cell from open to closed set
             this.openSet.splice(lowestIndex, 1);
             this.closedSet.push(current);
-            this.raw_closedSet.push(current);
 
             // Check each neighbor of the current cell
             let neighbours = grid.getNeighbours(current);
@@ -191,7 +186,6 @@ class AStar {
 
                 if (!this.openSet.includes(neighbour)) {
                     this.openSet.push(neighbour);
-                    this.raw_openSet.push(neighbour);
                 } else if (tentativeG >= neighbour.g) {
                     continue;
                 }
@@ -210,7 +204,7 @@ class AStar {
 }
 
 let solver = {
-    n : 256, // number of cells in one of the dimension
+    n : 128, // number of cells in one of the dimension
     cell_width : null, // Math.max(canvas.width / 32, canvas.height / 32),
     grid : null, // new Grid(canvas.width / 32),
     path : null,
