@@ -210,7 +210,7 @@ class AStar {
 }
 
 let solver = {
-    n : 128, // number of cells in one of the dimension
+    n : 256, // number of cells in one of the dimension
     cell_width : null, // Math.max(canvas.width / 32, canvas.height / 32),
     grid : null, // new Grid(canvas.width / 32),
     path : null,
@@ -224,7 +224,7 @@ solver.grid = new Grid(canvas.width / solver.n);
 
 function draw() {
     const blockedColor = "#000000";
-    const pathColor = "#FFFF00"; // "#9e4fff";
+    const pathColor = "#FF0000"; // "#9e4fff";
     const destinationColor = "#FF0000";
     const sourceColor = "#00FF00";
     const cellBorderColor = "rgba(0,0,0,0.2)";
@@ -239,8 +239,8 @@ function draw() {
 
             if (cell.isBlocked) 
                 color = blockedColor;
-            if (solver.aStar.closedSet.includes(cell))
-                color = "rgba(" + 10 * cell.g + ", 0," + 10 * cell.h + ", 1)";
+            // if (solver.aStar.closedSet.includes(cell))
+            //     color = "rgba(" + 10 * cell.g + ", 0," + 10 * cell.h + ", 1)";
             if (solver.path && solver.path.includes(cell))
                 color = pathColor;
             if (cell.equals(solver.source))
