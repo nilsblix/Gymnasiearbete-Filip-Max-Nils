@@ -1,8 +1,8 @@
 const canvas = document.getElementById("myCanvas");
 const c = canvas.getContext("2d");
 
-const x_offset = 20;
-const y_offset = 40;
+const x_offset = 30;
+const y_offset = 50;
 canvas.width = window.innerWidth - x_offset;
 canvas.height = window.innerHeight - y_offset;
 
@@ -204,7 +204,7 @@ class AStar {
 }
 
 let solver = {
-    n : 128, // number of cells in one of the dimension
+    n : 64, // number of cells in one of the dimension
     cell_width : null, // Math.max(canvas.width / 32, canvas.height / 32),
     grid : null, // new Grid(canvas.width / 32),
     path : null,
@@ -216,12 +216,14 @@ let solver = {
 solver.cell_width = Math.max(canvas.width / solver.n, canvas.height / solver.n);
 solver.grid = new Grid(canvas.width / solver.n);
 
+let mouse_grid = new Vector2(0, 0);
+
 function draw() {
     const blockedColor = "#000000";
-    const pathColor = "#FF0000"; // "#9e4fff";
+    const pathColor = "#FFFF00"; // "#9e4fff";
     const destinationColor = "#FF0000";
     const sourceColor = "#00FF00";
-    const cellBorderColor = "rgba(0,0,0,0.2)";
+    const alternativeBorderColor = "#dddddd";
     // const openSetColor = "purple";
     // const closedSetColor = "purple";
 
@@ -230,23 +232,43 @@ function draw() {
 
             const cell = solver.grid.getCell(x, y);
             let color = "#FFFFFF";
+            let cellBorderColor = "rgba(0,0,0,0.2)";
 
-            if (cell.isBlocked) 
+
+            if (cell.isBlocked) {
                 color = blockedColor;
-            // if (solver.aStar.closedSet.includes(cell))
-            //     color = "rgba(" + 10 * cell.g + ", 0," + 10 * cell.h + ", 1)";
+                cellBorderColor = alternativeBorderColor;
+            }
+            if (solver.aStar.closedSet.includes(cell)) {
+                // essentials
+                color = "rgba(" + 10 * cell.h + ", 0," + 10 * cell.g + ", 1)"; // blue to red
+                // color = "rgba(" + 10 * cell.g + "," + 10 * cell.h + ", 1)"; // green to red
+                // color = "rgba(0," + 10 * cell.g + "," + 10 * cell.h +", 1)"; // blue to green
+
+                // randoms:
+                // let r = 0.2 * cell.g * cell.h + 100;
+                // let g = 20;
+                // let b = 0.1 * cell.g * cell.h;
+                // color = "rgba(" + r + "," + g + "," + b + "1)";
+
+                // border
+                cellBorderColor = alternativeBorderColor;
+            }
             if (solver.path && solver.path.includes(cell))
                 color = pathColor;
-            if (cell.equals(solver.source))
+            if (cell.equals(solver.source)) {
                 color = sourceColor;
-            if (cell.equals(solver.destination))
+            }
+            if (cell.equals(solver.destination)) {
                 color = destinationColor;
+            }
 
             // Draw the cell
             c.fillStyle = color;
             c.fillRect(x * solver.cell_width, canvas.height - (y + 1) * solver.cell_width, solver.cell_width, solver.cell_width);
 
             // Optionally, draw cell borders
+            c.lineWidth = 0.5;
             c.strokeStyle = cellBorderColor;
             c.strokeRect(x * solver.cell_width, canvas.height - (y + 1) * solver.cell_width, solver.cell_width, solver.cell_width);
 
@@ -269,7 +291,7 @@ function randomWallGrid() {
 
 function start() {
 
-    randomWallGrid();
+    // randomWallGrid();
 
     // for (let i = 0; i < 7; i++) {
     //     solver.grid.cells[4][i].isBlocked = true;
@@ -304,9 +326,21 @@ function start() {
 let astar_timeElapsed = 0;
 let render_timeElapsed = 0;
 
+let d_pressed = false;
+let e_pressed = false;
+let w_pressed = false;
+
+
 function update() {
     // console.log("frameCount: "+ solver.frameCount);
     solver.frameCount++;
+
+    if (d_pressed)
+        solver.destination = new Cell(mouse_grid.x, mouse_grid.y, false);
+    if (e_pressed)
+        solver.grid.cells[mouse_grid.x][mouse_grid.y].isBlocked = false;
+    if (w_pressed)
+        solver.grid.cells[mouse_grid.x][mouse_grid.y].isBlocked = true;
 
     document.getElementById("astar_ms").innerHTML = astar_timeElapsed.toFixed(3);
     document.getElementById("render_ms").innerHTML = render_timeElapsed.toFixed(3);
@@ -327,6 +361,9 @@ canvas.addEventListener("mousemove", function(event) {
 
     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
     const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
+
+    mouse_grid.x = grid_x;
+    mouse_grid.y = grid_y;
 
     let grid_pos = new Vector2(grid_x, grid_y);
 
@@ -358,13 +395,80 @@ canvas.addEventListener("mousemove", function(event) {
 
 });
 
-canvas.addEventListener("mousedown", function(event) {
-    const rect = canvas.getBoundingClientRect();
-    let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
-
-    const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
-    const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
-
-    solver.destination = new Cell(grid_x, grid_y, false);
+document.addEventListener("keydown", function(event) {
+    if (event.key == "d") 
+        d_pressed = true;
+    if (event.key == "e")
+        e_pressed = true;
+    if (event.key == "w")
+        w_pressed = true;
+    
 })
+
+document.addEventListener("keyup", function(event) {
+    if (event.key == "d") 
+        d_pressed = false;
+    if (event.key == "e")
+        e_pressed = false;
+    if (event.key == "w")
+        w_pressed = false;
+})
+
+// function handleKeybind(keybind, action) {
+//     document.addEventListener("keydown", function(event) {
+//         if (event.key == keybind) {
+//             action(event);
+//         }
+//     })
+// }
+
+// let intervalId;
+
+// function isAKeybind(event) {
+//     return event.key == "d" || event.key == "e" ||event.key == "w";
+// }
+
+// function handleBlockingOfWalls(version) {
+//     const rect = canvas.getBoundingClientRect();
+//     let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
+
+//     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
+//     const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
+
+//     switch (version) {
+//         case "d": // destination
+//             solver.destination = new Cell(grid_x, grid_y, false);
+//             break;
+//         case "e": // erasing
+//             solver.grid.cells[grid_x][grid_y].isBlocked = false;
+//             break;
+//         case "w": // wall
+//             solver.grid.cells[grid_x][grid_y].isBlocked = true;
+//             break;
+//     }
+// }
+
+// document.addEventListener('keydown', (event) => {
+//     if (isAKeybind(event) && !intervalId) {
+//         intervalId = setInterval(handleBlockingOfWalls(event.key), 1000 / 60); // Calls myFunction every 100ms
+//     }
+// });
+
+// document.addEventListener('keyup', (event) => {
+//     if (isAKeybind(event)) {
+//         clearInterval(intervalId);
+//         intervalId = null;
+//     }
+// });
+
+// canvas.addEventListener("mousedown", function(event) {
+//     const rect = canvas.getBoundingClientRect();
+//     let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
+
+//     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
+//     const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
+
+//     solver.destination = new Cell(grid_x, grid_y, false);
+
+// })
 
