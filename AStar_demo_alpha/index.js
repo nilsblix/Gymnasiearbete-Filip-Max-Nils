@@ -239,6 +239,7 @@ function draw() {
                 color = blockedColor;
                 cellBorderColor = alternativeBorderColor;
             }
+
             if (solver.aStar.closedSet.includes(cell)) {
                 // essentials
                 color = "rgba(" + 10 * cell.h + ", 0," + 10 * cell.g + ", 1)"; // blue to red
@@ -263,6 +264,10 @@ function draw() {
                 color = destinationColor;
             }
 
+            if (cell.id.x == 2 && cell.id.y == 3) {
+                color = "#FF0000";
+            }
+
             // Draw the cell
             c.fillStyle = color;
             c.fillRect(x * solver.cell_width, canvas.height - (y + 1) * solver.cell_width, solver.cell_width, solver.cell_width);
@@ -284,42 +289,41 @@ function randomWallGrid() {
             if (rand > 0.5) {
                 solver.grid.cells[x][y].isBlocked = true;
             }
-            // * y / solver.grid.numY
+
+        }
+    }
+}
+
+function allBlocked() {
+    for (let x = 0; x < solver.grid.numX; x++) {
+        for (let y = 0; y < solver.grid.numY; y++) {
+            solver.grid.cells[x][y].isBlocked = true;
+        }
+    }
+}
+
+function ondskefullaBlockeraren() {
+    for (let x = 1; x < solver.grid.numX; x += 2) {
+        for (let y = 0; y < solver.grid.numY; y++) {
+            solver.grid.cells[x][y].isBlocked = true;
+        }
+    }
+
+    for (let x = 0; x < solver.grid.numX; x++) {
+        for (let y = 1; y < solver.grid.numY; y += 2) {
+            solver.grid.cells[x][y].isBlocked = true;
         }
     }
 }
 
 function start() {
 
-    // randomWallGrid();
+    randomWallGrid();
 
-    // for (let i = 0; i < 7; i++) {
-    //     solver.grid.cells[4][i].isBlocked = true;
-    // }
+    // const cell = solver.grid.getCell(3, 3);
+    // cell.isBlocked = true;
 
-    // for (let i = 0; i < 10; i++) {
-    //     solver.grid.cells[i][10].isBlocked = true;
-    // }
-
-    // for (let i = 5; i < 22; i++) {
-    //     solver.grid.cells[9][i].isBlocked = true;
-    // }
-
-    // // let y = 15;
-    // // for (let x = 15; x < 28; x++) {
-    // //     solver.grid.cells[x][y].isBlocked = true;
-    // //     y--;
-    // // }
-
-    // for (let y = 5; y < 20; y++) {
-    //     solver.grid.cells[15][y].isBlocked = true;
-    //     solver.grid.cells[16][y].isBlocked = true;
-    // }
-
-    // for (let x = 15; x < 30; x++) {
-    //     solver.grid.cells[x][5].isBlocked = true;
-    //     solver.grid.cells[x][6].isBlocked = true;
-    // }
+    // ondskefullaBlockeraren();
 
 }
 
@@ -413,62 +417,3 @@ document.addEventListener("keyup", function(event) {
     if (event.key == "w")
         w_pressed = false;
 })
-
-// function handleKeybind(keybind, action) {
-//     document.addEventListener("keydown", function(event) {
-//         if (event.key == keybind) {
-//             action(event);
-//         }
-//     })
-// }
-
-// let intervalId;
-
-// function isAKeybind(event) {
-//     return event.key == "d" || event.key == "e" ||event.key == "w";
-// }
-
-// function handleBlockingOfWalls(version) {
-//     const rect = canvas.getBoundingClientRect();
-//     let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
-
-//     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
-//     const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
-
-//     switch (version) {
-//         case "d": // destination
-//             solver.destination = new Cell(grid_x, grid_y, false);
-//             break;
-//         case "e": // erasing
-//             solver.grid.cells[grid_x][grid_y].isBlocked = false;
-//             break;
-//         case "w": // wall
-//             solver.grid.cells[grid_x][grid_y].isBlocked = true;
-//             break;
-//     }
-// }
-
-// document.addEventListener('keydown', (event) => {
-//     if (isAKeybind(event) && !intervalId) {
-//         intervalId = setInterval(handleBlockingOfWalls(event.key), 1000 / 60); // Calls myFunction every 100ms
-//     }
-// });
-
-// document.addEventListener('keyup', (event) => {
-//     if (isAKeybind(event)) {
-//         clearInterval(intervalId);
-//         intervalId = null;
-//     }
-// });
-
-// canvas.addEventListener("mousedown", function(event) {
-//     const rect = canvas.getBoundingClientRect();
-//     let canvas_pos = new Vector2(event.clientX - rect.left, event.clientY - rect.top);
-
-//     const grid_x = Math.floor(canvas_pos.x / solver.cell_width);
-//     const grid_y = Math.floor((canvas.height - canvas_pos.y) / solver.cell_width);
-
-//     solver.destination = new Cell(grid_x, grid_y, false);
-
-// })
-
