@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A* Pathfinding demo</title>
+    <title>pathfinding demo</title>
 </head>
 <body>
-    <span id ="astar_ms">0.000</span> ms spent doing A* &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp;
-    <span id ="render_ms">0.000</span> ms spent rendering &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp;
+    <select id="search-algorithm-select">
+        <option value="">Select an option</option>
+        <option value="a-star">A*</option>
+        <option value="greedy-befs">Greedy BeFS</option>
+        <option value="djikstra">Djikstra</option>
+        <option value="bfs">BFS</option>
+    </select>
+    <!-- <span id ="astar_ms">0.000</span> ms spent doing A* &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; -->
+    <span> search algorithm dt = </span>
+    <span id="search-algorithm-dt">0.000</span> 
+    <span> ms </span> &nbsp; &nbsp; &nbsp;
+    <span id ="render_ms">0.000</span> ms spent rendering &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
     <span id ="sum_ms">0.000</span> ms sum
     <canvas id="myCanvas" style="border: 2px solid"></canvas>
-    <script src="index.js"></script>
+    <script src="index.js" type="module"></script>
 </body>
 </html>

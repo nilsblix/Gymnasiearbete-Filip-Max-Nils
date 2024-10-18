@@ -1,5 +1,12 @@
+import { AStar } from "./astar.js";
+import { Dijkstra } from "./djikstra.js";
+import { GreedyBEFS } from "./greedy_befs.js";
+import { BFS } from "./bfs.js";
+
 const canvas = document.getElementById("myCanvas");
 const c = canvas.getContext("2d");
+
+const search_algorithm_selector = document.getElementById("search-algorithm-select");
 
 const x_offset = 30;
 const y_offset = 50;
@@ -137,81 +144,19 @@ class Grid {
     }
 }
 
-class AStar {
-    constructor() {
-        this.openSet = [];
-        this.closedSet = [];
-    }
-
-    getPath(grid, start, end) {
-        this.openSet = [start];
-        this.closedSet = [];
-
-        start.calculateHeuristic(end);
-
-        while (this.openSet.length > 0) {
-            // Find the cell in the open set with the lowest f value
-            let lowestIndex = 0;
-            for (let i = 1; i < this.openSet.length; i++) {
-                if (this.openSet[i].f < this.openSet[lowestIndex].f) {
-                    lowestIndex = i;
-                }
-            }
-            let current = this.openSet[lowestIndex];
-
-            // If the current cell is the end cell, we've found the path
-            if (current.equals(end)) {
-                let path = [];
-                let temp = current;
-                while (temp.previous) {
-                    path.push(temp);
-                    temp = temp.previous;
-                }
-                path.push(start); // Optionally include the start cell
-                return path.reverse();
-            }
-
-            // Move the current cell from open to closed set
-            this.openSet.splice(lowestIndex, 1);
-            this.closedSet.push(current);
-
-            // Check each neighbor of the current cell
-            let neighbours = grid.getNeighbours(current);
-            for (let neighbour of neighbours) {
-                if (this.closedSet.includes(neighbour)) {
-                    continue;
-                }
-
-                let tentativeG = current.g + (current.id.x != neighbour.id.x && current.id.y != neighbour.id.y ? Math.SQRT2 : 1);
-
-                if (!this.openSet.includes(neighbour)) {
-                    this.openSet.push(neighbour);
-                } else if (tentativeG >= neighbour.g) {
-                    continue;
-                }
-
-                neighbour.g = tentativeG;
-                neighbour.calculateHeuristic(end);
-                neighbour.previous = current;
-            }
-        }
-
-    // If we get here, there's no valid path
-    console.log("No valid path has been found");
-    return null;
-
-    }
-}
 
 let solver = {
-    n : 64, // number of cells in one of the dimension
+    n : 96, // number of cells in one of the dimension
     cell_width : null, // Math.max(canvas.width / 32, canvas.height / 32),
     grid : null, // new Grid(canvas.width / 32),
     path : null,
     destination : new Cell(0, 0, false),
     source : new Cell(10, 10, false),
     frameCount : 0,
-    aStar : new AStar()
+    aStar : new AStar(),
+    g_befs : new GreedyBEFS(),
+    dijkstra : new Dijkstra(),
+    bfs : new BFS(),
 }
 solver.cell_width = Math.max(canvas.width / solver.n, canvas.height / solver.n);
 solver.grid = new Grid(canvas.width / solver.n);
@@ -219,6 +164,18 @@ solver.grid = new Grid(canvas.width / solver.n);
 let mouse_grid = new Vector2(0, 0);
 
 function draw() {
+
+    const solv = solver;
+    function handlePath(finder) {
+        const st = performance.now();
+        finder.findPath(solv.grid, solv.source, solv.destination)
+        const et = performance.now();
+        finder.time_elapsed = et - st;
+    }
+
+    handlePath(solver.aStar);
+    handlePath(solver.dijkstra);
+
     const blockedColor = "#000000";
     const pathColor = "#FFFF00"; // "#9e4fff";
     const destinationColor = "#FF0000";
@@ -240,32 +197,23 @@ function draw() {
                 cellBorderColor = alternativeBorderColor;
             }
 
-            if (solver.aStar.closedSet.includes(cell)) {
-                // essentials
-                color = "rgba(" + 10 * cell.h + ", 0," + 10 * cell.g + ", 1)"; // blue to red
-                // color = "rgba(" + 10 * cell.g + "," + 10 * cell.h + ", 1)"; // green to red
-                // color = "rgba(0," + 10 * cell.g + "," + 10 * cell.h +", 1)"; // blue to green
+            // if (search_algorithm_selector.value == "a-star")
+            //     [color, cellBorderColor] = solver.aStar.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
+            // if (search_algorithm_selector.value == "greedy-bfs")
+            //     [color, cellBorderColor] = solver.g_befs.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
+            // if (search_algorithm_selector.value == "djikstra")
+            //     [color, cellBorderColor] = solver.dijkstra.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
+            // if (search_algorithm_selector.value == "bfs")
+            //     [color, cellBorderColor] = solver.bfs.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
 
-                // randoms:
-                // let r = 0.2 * cell.g * cell.h + 100;
-                // let g = 20;
-                // let b = 0.1 * cell.g * cell.h;
-                // color = "rgba(" + r + "," + g + "," + b + "1)";
-
-                // border
-                cellBorderColor = alternativeBorderColor;
-            }
-            if (solver.path && solver.path.includes(cell))
-                color = pathColor;
+            [color, cellBorderColor] = solver.dijkstra.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
+            [color, cellBorderColor] = solver.aStar.drawCell([cell, color, alternativeBorderColor, cellBorderColor, pathColor]);
+            
             if (cell.equals(solver.source)) {
                 color = sourceColor;
             }
             if (cell.equals(solver.destination)) {
                 color = destinationColor;
-            }
-
-            if (cell.id.x == 2 && cell.id.y == 3) {
-                color = "#FF0000";
             }
 
             // Draw the cell
@@ -341,12 +289,32 @@ function update() {
 
     if (d_pressed)
         solver.destination = new Cell(mouse_grid.x, mouse_grid.y, false);
-    if (e_pressed)
-        solver.grid.cells[mouse_grid.x][mouse_grid.y].isBlocked = false;
-    if (w_pressed)
-        solver.grid.cells[mouse_grid.x][mouse_grid.y].isBlocked = true;
+    if (e_pressed) {
+        for (let x = -2; x <= 2; x++) {
+            for (let y = -2; y <= 2; y++) {
+                solver.grid.cells[mouse_grid.x + x][mouse_grid.y + y].isBlocked = false;
+            }
+        }
+    }
+    if (w_pressed) {
+        for (let x = -1; x <= 1; x++) {
+            for (let y = -1; y <= 1; y++) {
+                solver.grid.cells[mouse_grid.x + x][mouse_grid.y + y].isBlocked = true;
+            }
+        }
+    }
 
-    document.getElementById("astar_ms").innerHTML = astar_timeElapsed.toFixed(3);
+    if (search_algorithm_selector.value == "")
+        document.getElementById("search-algorithm-dt").innerHTML = -1;
+    if (search_algorithm_selector.value == "a-star")
+        document.getElementById("search-algorithm-dt").innerHTML = solver.aStar.time_elapsed.toFixed(3);
+    if (search_algorithm_selector.value == "greedy-befs")
+        document.getElementById("search-algorithm-dt").innerHTML = solver.g_befs.time_elapsed.toFixed(3);
+    if (search_algorithm_selector.value == "djikstra")
+        document.getElementById("search-algorithm-dt").innerHTML = solver.dijkstra.time_elapsed.toFixed(3);
+    if (search_algorithm_selector.value == "bfs")
+        document.getElementById("search-algorithm-dt").innerHTML = solver.bfs.time_elapsed.toFixed(3);
+
     document.getElementById("render_ms").innerHTML = render_timeElapsed.toFixed(3);
     document.getElementById("sum_ms").innerHTML = (astar_timeElapsed + render_timeElapsed).toFixed(3);
     // timeElapsed = 0;
@@ -378,11 +346,22 @@ canvas.addEventListener("mousemove", function(event) {
 
             solver.aStar = new AStar();
 
-            let astar_st = performance.now();
-            solver.path = solver.aStar.getPath(solver.grid, solver.source, solver.destination);
-            let astar_et = performance.now();
+            const solv = solver;
+            function handlePath(finder) {
+                const st = performance.now();
+                finder.findPath(solv.grid, solv.source, solv.destination)
+                const et = performance.now();
+                finder.time_elapsed = et - st;
+            }
 
-            astar_timeElapsed = astar_et - astar_st;
+            // if (search_algorithm_selector.value == "a-star")
+            //     handlePath(solver.aStar);
+            // if (search_algorithm_selector.value == "greedy-befs")
+            //     handlePath(solver.g_befs);
+            // if (search_algorithm_selector.value == "djikstra")
+            //     handlePath(solver.dijkstra);
+            // if (search_algorithm_selector.value == "bfs")
+            //     handlePath(solver.bfs);
 
             lastGridPos = grid_pos; // Update last tracked position
         }
